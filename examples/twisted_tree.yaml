@@ -1,0 +1,37 @@
+# Kalpana3D Example: Twisted Organic Tree
+# This scene demonstrates the power of organic blending (smooth_union)
+# to create complex, life-like shapes from simple primitives.
+
+type: smooth_union
+k: 0.3  # Controls the smoothness of the blend. Smaller is sharper.
+
+children:
+  # The main trunk of the tree
+  - type: sphere
+    params: [0.8] # Radius
+    translate: [0, -0.5, 0]
+
+  # A smaller sphere blended into the trunk
+  - type: sphere
+    params: [0.6]
+    translate: [0.5, 0.2, 0]
+
+  # A third sphere, creating a twisting effect
+  - type: sphere
+    params: [0.5]
+    translate: [-0.3, 0.8, 0.2]
+
+  # A fourth, smaller sphere extending outwards
+  - type: sphere
+    params: [0.4]
+    translate: [0.8, 1.2, -0.1]
+
+  # A small "branch" sphere
+  - type: sphere
+    params: [0.3]
+    translate: [-0.7, 1.5, 0.5]
+
+  # Another small "branch"
+  - type: sphere
+    params: [0.2]
+    translate: [1.0, 1.8, -0.4]
