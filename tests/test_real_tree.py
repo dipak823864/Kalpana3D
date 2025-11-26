@@ -25,23 +25,33 @@ def main():
         return
 
     # --- 2. Render a Preview Image ---
-    print("Rendering preview image...")
-    img_filepath = "gallery/real_tree_fix.png"
+    print("Rendering detail view...")
+    img_filepath_detail = "gallery/tree_detail.png"
     width, height = 800, 600
-    camera_pos = vec3(0.0, 1.0, 5.0)
+    camera_pos_detail = vec3(0.0, 1.0, 2.0)
     light_pos = vec3(4.0, 5.0, 5.0)
 
     start_time = time.time()
-    pixels = render(width, height, camera_pos, light_pos, scene_sdf)
+    pixels = render(width, height, camera_pos_detail, light_pos, scene_sdf)
     end_time = time.time()
     print(f"Render finished in {end_time - start_time:.2f} seconds.")
+    save_image(pixels, img_filepath_detail)
+    print(f"Detail image saved to {img_filepath_detail}")
 
-    save_image(pixels, img_filepath)
-    print(f"Preview image saved to {img_filepath}")
+    print("\nRendering full view...")
+    img_filepath_full = "gallery/tree_full_view.png"
+    camera_pos_full = vec3(0.0, 1.0, -7.0)
+
+    start_time = time.time()
+    pixels = render(width, height, camera_pos_full, light_pos, scene_sdf)
+    end_time = time.time()
+    print(f"Render finished in {end_time - start_time:.2f} seconds.")
+    save_image(pixels, img_filepath_full)
+    print(f"Full view image saved to {img_filepath_full}")
 
     # --- 3. Export the 3D Model ---
     print("\nExporting 3D model...")
-    obj_filepath = "gallery/real_tree_fix.obj"
+    obj_filepath = "gallery/twisted_tree.obj"
     bounds = ((-2.0, -2.0, -2.0), (2.0, 2.0, 2.0))
     resolution = 64 # Higher resolution for the final model
 

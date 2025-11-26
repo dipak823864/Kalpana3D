@@ -3,7 +3,7 @@
 # Domain warping is applied to add realistic, subtle noise, simulating bark.
 
 type: smooth_union
-k: 0.1  # Tighter blend for more defined branches
+k: 0.05  # Tighter blend for more defined branches
 
 children:
   - type: domain_warp
@@ -11,40 +11,40 @@ children:
     amplitude: 0.05
     child:
       type: smooth_union
-      k: 0.15
+      k: 0.05
       children:
         # Trunk
         - type: capsule
           start_point: [0, -1, 0]
           end_point: [0, 0.5, 0]
-          radius: 0.4
+          radius: 0.3
 
         # Main Branch 1
         - type: capsule
           start_point: [0, 0.2, 0]
           end_point: [0.8, 1.2, 0.2]
-          radius: 0.25
+          radius: 0.18
 
         # Sub-branch 1a
         - type: capsule
           start_point: [0.8, 1.2, 0.2]
           end_point: [1.2, 1.8, 0.3]
-          radius: 0.15
+          radius: 0.1
 
         # Main Branch 2
         - type: capsule
           start_point: [0, 0.4, 0]
           end_point: [-0.6, 1.0, -0.3]
-          radius: 0.2
+          radius: 0.15
 
         # Sub-branch 2a
         - type: capsule
           start_point: [-0.6, 1.0, -0.3]
           end_point: [-1.0, 1.5, -0.5]
-          radius: 0.1
+          radius: 0.07
 
         # Sub-branch 2b
         - type: capsule
           start_point: [-0.6, 1.0, -0.3]
           end_point: [-0.8, 1.6, 0]
-          radius: 0.08
+          radius: 0.05
