@@ -8,22 +8,38 @@ from kalpana3d.sdf.primitives import sdf_sphere
 def get_normal(p, scene_sdf):
     """
     Calculates the surface normal at a point p using the SDF gradient.
+    This version is adapted for a parallel SDF that evaluates point batches.
     """
     epsilon = 0.0001
-    dx = scene_sdf(p + vec3(epsilon, 0, 0)) - scene_sdf(p - vec3(epsilon, 0, 0))
-    dy = scene_sdf(p + vec3(0, epsilon, 0)) - scene_sdf(p - vec3(0, epsilon, 0))
-    dz = scene_sdf(p + vec3(0, 0, epsilon)) - scene_sdf(p - vec3(0, 0, epsilon))
+
+    # Numba doesn't like creating an array from a list of arrays, so we use a list of tuples
+    points_to_eval = np.array([
+        (p[0] + epsilon, p[1], p[2]), (p[0] - epsilon, p[1], p[2]),
+        (p[0], p[1] + epsilon, p[2]), (p[0], p[1] - epsilon, p[2]),
+        (p[0], p[1], p[2] + epsilon), (p[0], p[1], p[2] - epsilon)
+    ])
+
+    distances = scene_sdf(points_to_eval)
+
+    dx = distances[0] - distances[1]
+    dy = distances[2] - distances[3]
+    dz = distances[4] - distances[5]
+
     return normalize(vec3(dx, dy, dz))
 
 @njit(fastmath=True)
 def ray_march(ro, rd, scene_sdf, max_steps=100, min_dist=0.001, max_dist=100.0):
     """
     Performs the ray marching algorithm.
+    Adapted for a parallel SDF that evaluates point batches.
     """
     t = 0.0
     for i in range(max_steps):
         p = ro + t * rd
-        dist = scene_sdf(p)
+
+        # Use np.expand_dims to create a 2D array with a single point
+        dist = scene_sdf(np.expand_dims(p, axis=0))[0]
+
         if dist < min_dist:
             return t, True
         if t > max_dist:

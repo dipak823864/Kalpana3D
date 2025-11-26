@@ -1,37 +1,50 @@
-# Kalpana3D Example: Twisted Organic Tree
-# This scene demonstrates the power of organic blending (smooth_union)
-# to create complex, life-like shapes from simple primitives.
+# Kalpana3D Example: Realistic Twisted Tree
+# This scene uses capsules to build a tree with a proper branch structure.
+# Domain warping is applied to add realistic, subtle noise, simulating bark.
 
 type: smooth_union
-k: 0.3  # Controls the smoothness of the blend. Smaller is sharper.
+k: 0.1  # Tighter blend for more defined branches
 
 children:
-  # The main trunk of the tree
-  - type: sphere
-    params: [0.8] # Radius
-    translate: [0, -0.5, 0]
+  - type: domain_warp
+    frequency: 0.8
+    amplitude: 0.05
+    child:
+      type: smooth_union
+      k: 0.15
+      children:
+        # Trunk
+        - type: capsule
+          start_point: [0, -1, 0]
+          end_point: [0, 0.5, 0]
+          radius: 0.4
 
-  # A smaller sphere blended into the trunk
-  - type: sphere
-    params: [0.6]
-    translate: [0.5, 0.2, 0]
+        # Main Branch 1
+        - type: capsule
+          start_point: [0, 0.2, 0]
+          end_point: [0.8, 1.2, 0.2]
+          radius: 0.25
 
-  # A third sphere, creating a twisting effect
-  - type: sphere
-    params: [0.5]
-    translate: [-0.3, 0.8, 0.2]
+        # Sub-branch 1a
+        - type: capsule
+          start_point: [0.8, 1.2, 0.2]
+          end_point: [1.2, 1.8, 0.3]
+          radius: 0.15
 
-  # A fourth, smaller sphere extending outwards
-  - type: sphere
-    params: [0.4]
-    translate: [0.8, 1.2, -0.1]
+        # Main Branch 2
+        - type: capsule
+          start_point: [0, 0.4, 0]
+          end_point: [-0.6, 1.0, -0.3]
+          radius: 0.2
 
-  # A small "branch" sphere
-  - type: sphere
-    params: [0.3]
-    translate: [-0.7, 1.5, 0.5]
+        # Sub-branch 2a
+        - type: capsule
+          start_point: [-0.6, 1.0, -0.3]
+          end_point: [-1.0, 1.5, -0.5]
+          radius: 0.1
 
-  # Another small "branch"
-  - type: sphere
-    params: [0.2]
-    translate: [1.0, 1.8, -0.4]
+        # Sub-branch 2b
+        - type: capsule
+          start_point: [-0.6, 1.0, -0.3]
+          end_point: [-0.8, 1.6, 0]
+          radius: 0.08

@@ -1,7 +1,7 @@
 import time
 import numpy as np
 
-from kalpana3d.parsers.yaml_parser import parse_scene_to_sdf
+from kalpana3d.scene import load_scene
 from kalpana3d.render.raymarcher import render, save_image
 from kalpana3d.mesher.marching_cubes import export_obj
 from kalpana3d.math.vec3 import vec3
@@ -15,17 +15,18 @@ def main():
     """
     yaml_filepath = "examples/twisted_tree.yaml"
 
-    print(f"Parsing scene from {yaml_filepath}...")
+    print(f"Loading scene from {yaml_filepath}...")
     try:
-        # 1. Parse the scene and get the dynamically compiled SDF
-        scene_sdf = parse_scene_to_sdf(yaml_filepath)
+        # 1. Load the scene, which creates the SDF
+        scene = load_scene(yaml_filepath)
+        scene_sdf = scene.sdf
     except Exception as e:
-        print(f"Error parsing scene: {e}")
+        print(f"Error loading scene: {e}")
         return
 
     # --- 2. Render a Preview Image ---
     print("Rendering preview image...")
-    img_filepath = "gallery/twisted_tree_preview.png"
+    img_filepath = "gallery/real_tree_fix.png"
     width, height = 800, 600
     camera_pos = vec3(0.0, 1.0, 5.0)
     light_pos = vec3(4.0, 5.0, 5.0)
@@ -40,7 +41,7 @@ def main():
 
     # --- 3. Export the 3D Model ---
     print("\nExporting 3D model...")
-    obj_filepath = "gallery/twisted_tree.obj"
+    obj_filepath = "gallery/real_tree_fix.obj"
     bounds = ((-2.0, -2.0, -2.0), (2.0, 2.0, 2.0))
     resolution = 64 # Higher resolution for the final model
 

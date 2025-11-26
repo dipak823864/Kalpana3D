@@ -1,113 +1,93 @@
 import yaml
-from numba import njit
 import numpy as np
-
 from kalpana3d.math.vec3 import vec3
-from kalpana3d.sdf.primitives import sdf_sphere
-from kalpana3d.sdf.ops import op_smooth_union
 
-# Collection of SDF functions that can be referenced by the parser
-SDF_FUNCTIONS = {
-    'sphere': sdf_sphere
-}
+# Type IDs for SDF primitives
+TYPE_ID_SPHERE = 1
+TYPE_ID_CAPSULE = 2
 
-# Collection of SDF operation functions
-SDF_OPERATIONS = {
-    'smooth_union': op_smooth_union
-}
+def _apply_transform(point, translation):
+    """Applies translation to a point."""
+    if translation is not None:
+        return np.array(point) + np.array(translation)
+    return np.array(point)
 
-def _create_sdf_from_dict(scene_dict):
+def _parse_recursive(scene_dict, object_list, transform_stack):
     """
-    Recursively builds a single SDF function from a scene dictionary.
+    Recursively traverses the scene graph to build a flat list of primitives.
     """
     obj_type = scene_dict.get('type')
 
-    if not obj_type:
-        raise ValueError("Scene object must have a 'type' defined.")
+    current_translation = scene_dict.get('translate', None)
+    transform_stack.append(current_translation)
 
-    # Handle transformations
-    # IMPORTANT: Transformations are applied in reverse order to the point (p)
-    # This is more efficient than transforming the object itself.
-    p_transformations = []
-    if 'translate' in scene_dict:
-        t = scene_dict['translate']
-        p_transformations.append(f"p - vec3({t[0]}, {t[1]}, {t[2]})")
-
-    if 'rotate' in scene_dict:
-        # Note: Implementing full rotation is complex.
-        # This is a simplified placeholder. A real implementation would need rotation matrices.
-        pass
-
-    # Build the transformed point string
-    p_str = "p"
-    if p_transformations:
-        p_str = " ".join(p_transformations)
-
-    # Handle SDF Primitives
-    if obj_type in SDF_FUNCTIONS:
-        func_name = SDF_FUNCTIONS[obj_type].__name__
-        params = scene_dict.get('params', [])
-        param_str = ", ".join(map(str, params))
-        return f"{func_name}({p_str}, {param_str})"
-
-    # Handle SDF Operations (like blending)
-    elif obj_type in SDF_OPERATIONS:
-        op_func_name = SDF_OPERATIONS[obj_type].__name__
+    if obj_type == 'smooth_union':
         children = scene_dict.get('children', [])
-        if not children or len(children) < 2:
-            raise ValueError(f"'{obj_type}' operation requires at least 2 children.")
+        for child in children:
+            _parse_recursive(child, object_list, transform_stack)
 
-        # Recursively build SDFs for children
-        child_sdfs = [_create_sdf_from_dict(child) for child in children]
-
-        # Combine children using the operation
-        # For smooth_union, extra parameter 'k' is needed
-        k = scene_dict.get('k', 0.2)
-
-        # Chain the operations: op(sdf1, op(sdf2, sdf3, k), k)
-        sdf_expr = child_sdfs[0]
-        for i in range(1, len(child_sdfs)):
-            sdf_expr = f"{op_func_name}({sdf_expr}, {child_sdfs[i]}, {k})"
-
-        return sdf_expr
+    elif obj_type == 'domain_warp':
+        child = scene_dict.get('child')
+        if child:
+            _parse_recursive(child, object_list, transform_stack)
 
     else:
-        raise ValueError(f"Unknown object type: {obj_type}")
+        # Calculate the cumulative translation
+        total_translation = np.array([0.0, 0.0, 0.0])
+        for t in transform_stack:
+            if t is not None:
+                total_translation += np.array(t)
 
+        # Pack the primitive data into a standardized format
+        if obj_type == 'sphere':
+            # Data: [type_id, center.x, center.y, center.z, radius, 0, 0, 0]
+            center = _apply_transform([0,0,0], total_translation)
+            radius = scene_dict['params'][0]
+            object_list.append([TYPE_ID_SPHERE, center[0], center[1], center[2], radius, 0, 0, 0])
 
-def parse_scene_to_sdf(filepath):
+        elif obj_type == 'capsule':
+            # Data: [type_id, a.x, a.y, a.z, b.x, b.y, b.z, radius]
+            start_point = _apply_transform(scene_dict['start_point'], total_translation)
+            end_point = _apply_transform(scene_dict['end_point'], total_translation)
+            radius = scene_dict['radius']
+            object_list.append([TYPE_ID_CAPSULE] + list(start_point) + list(end_point) + [radius])
+
+    transform_stack.pop()
+
+def parse_scene_to_array(filepath):
     """
-    Parses a YAML scene file and returns a dynamic, JIT-compiled SDF function.
-
-    Args:
-        filepath: Path to the YAML file.
-
-    Returns:
-        A Numba-jitted function that computes the SDF for the entire scene.
+    Parses a YAML scene file and returns a NumPy array of object data
+    and a dictionary of global scene parameters.
     """
     with open(filepath, 'r') as f:
         scene_config = yaml.safe_load(f)
 
-    sdf_body = _create_sdf_from_dict(scene_config)
+    object_list = []
+    _parse_recursive(scene_config, object_list, [])
 
-    # Dynamically create the full function code
-    # This is a powerful but potentially risky technique. It's used here to allow
-    # Numba to JIT-compile the entire, dynamically generated scene SDF into a
-    # single, highly efficient function.
-    func_code = f"""
-from numba import njit
-import numpy as np
-from kalpana3d.math.vec3 import vec3
-from kalpana3d.sdf.primitives import sdf_sphere
-from kalpana3d.sdf.ops import op_smooth_union
+    # Global parameters (e.g., for smooth union and domain warp)
+    global_params = {
+        'smooth_union_k': scene_config.get('k', 0.2),
+        'domain_warp_freq': 0.0,
+        'domain_warp_amp': 0.0,
+    }
 
-@njit(fastmath=True)
-def scene_sdf(p):
-    return {sdf_body}
-"""
+    # Check for domain warp and extract its parameters
+    def find_domain_warp(d):
+        if d.get('type') == 'domain_warp':
+            return d
+        if 'children' in d:
+            for child in d['children']:
+                res = find_domain_warp(child)
+                if res:
+                    return res
+        if 'child' in d:
+            return find_domain_warp(d['child'])
+        return None
 
-    # Use exec to define the function in a controlled scope
-    scope = {}
-    exec(func_code, globals(), scope)
+    domain_warp_node = find_domain_warp(scene_config)
+    if domain_warp_node:
+        global_params['domain_warp_freq'] = domain_warp_node.get('frequency', 1.0)
+        global_params['domain_warp_amp'] = domain_warp_node.get('amplitude', 0.1)
 
-    return scope['scene_sdf']
+    return np.array(object_list, dtype=np.float64), global_params

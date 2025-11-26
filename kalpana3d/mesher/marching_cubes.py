@@ -40,13 +40,24 @@ def march_cubes(sdf_func, bounds, resolution):
     res_y = int(size[1] / cell_size) + 1
     res_z = int(size[2] / cell_size) + 1
 
-    # Sample SDF on the grid
-    grid_values = np.zeros((res_x, res_y, res_z), dtype=np.float64)
-    for i in prange(res_x):
+    # Create grid points manually for Numba compatibility
+    grid_points = np.empty((res_x * res_y * res_z, 3), dtype=np.float64)
+    x_coords = np.linspace(min_bound[0], max_bound[0], res_x)
+    y_coords = np.linspace(min_bound[1], max_bound[1], res_y)
+    z_coords = np.linspace(min_bound[2], max_bound[2], res_z)
+
+    idx = 0
+    for i in range(res_x):
         for j in range(res_y):
             for k in range(res_z):
-                p = min_bound + np.array([i, j, k]) * cell_size
-                grid_values[i, j, k] = sdf_func(p)
+                grid_points[idx, 0] = x_coords[i]
+                grid_points[idx, 1] = y_coords[j]
+                grid_points[idx, 2] = z_coords[k]
+                idx += 1
+
+    # Sample SDF on the grid in a single parallel batch
+    sdf_values = sdf_func(grid_points)
+    grid_values = sdf_values.reshape((res_x, res_y, res_z))
 
     vertices = []
     faces = []
