@@ -37,14 +37,3 @@ children:
           end_point: [-0.6, 1.0, -0.3]
           radius: 0.2
 
-        # Sub-branch 2a
-        - type: capsule
-          start_point: [-0.6, 1.0, -0.3]
-          end_point: [-1.0, 1.5, -0.5]
-          radius: 0.1
-
-        # Sub-branch 2b
-        - type: capsule
-          start_point: [-0.6, 1.0, -0.3]
-          end_point: [-0.8, 1.6, 0]
-          radius: 0.08
